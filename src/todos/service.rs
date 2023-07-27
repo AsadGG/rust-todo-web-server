@@ -51,7 +51,7 @@ pub async fn get_todos(pool: web::Data<Pool<Postgres>>) -> impl Responder {
 
     match todos {
         Ok(todos) => {
-            if todos.len() > 0 {
+            if !todos.is_empty() {
                 let json_todo = json!({
                     "data":todos,
                     "message":"todos fetched successfully",

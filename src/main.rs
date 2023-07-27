@@ -2,16 +2,20 @@
 
 mod config;
 mod todos;
+mod users;
 use config::{database::get_pool, open_api::APIDocumentation};
 
 use actix_web::{web, App, HttpServer};
-use todos::routes::scoped_config;
 
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub fn config(service_config: &mut web::ServiceConfig) {
-    service_config.service(web::scope("/api").configure(scoped_config));
+    service_config.service(
+        web::scope("/api")
+            .configure(todos::routes::scoped_config)
+            .configure(users::routes::scoped_config),
+    );
 }
 
 #[actix_web::main]

@@ -4,6 +4,7 @@
     "chrono",
     "dotenv",
     "dtos",
+    "Hasher",
     "openapi",
     "rustls",
     "serde",
