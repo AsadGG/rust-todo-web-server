@@ -1,5 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{types::chrono::NaiveDateTime, types::Uuid, FromRow};
+use sqlx::{types::Uuid, FromRow};
 use utoipa::ToSchema;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PathUuid {
@@ -13,9 +14,9 @@ pub struct Todo {
     pub id: Uuid,
     pub title: String,
     #[serde(rename = "createdAt")]
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
     #[serde(rename = "updatedAt")]
-    pub updated_at: NaiveDateTime,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]

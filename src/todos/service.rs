@@ -139,7 +139,7 @@ pub async fn update_todo(
         return HttpResponse::NotFound().json(json_todo);
     }
 
-    let now = Utc::now().naive_utc();
+    let now = Utc::now();
     let todo = query_result.unwrap();
 
     let query_result = sqlx::query_as!(

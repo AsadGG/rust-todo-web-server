@@ -5,10 +5,9 @@ pub struct EnvironmentVariables {
     pub database_url: String,
 }
 
-pub fn get_environment_variables() -> EnvironmentVariables {
-    dotenv::dotenv().ok();
-    let database_url = dotenv::var("DATABASE_URL").expect("Key DATABASE_URL is Required");
-    return EnvironmentVariables {
-        database_url: database_url,
-    };
+impl EnvironmentVariables {
+    pub fn initialize() -> EnvironmentVariables {
+        let database_url = dotenv::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        return EnvironmentVariables { database_url };
+    }
 }
