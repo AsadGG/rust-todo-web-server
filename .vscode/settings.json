@@ -1,0 +1,15 @@
+{
+  "cSpell.words": [
+    "actix",
+    "chrono",
+    "dotenv",
+    "dtos",
+    "openapi",
+    "rustls",
+    "serde",
+    "sqlx",
+    "todos",
+    "utoipa"
+  ],
+  "rust-analyzer.linkedProjects": [".\\Cargo.toml"]
+}
