@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{http::StatusCode, web, HttpResponse, Responder};
 use serde_json::json;
 use sqlx::{Pool, Postgres};
 use validator::Validate;
@@ -15,7 +15,7 @@ pub async fn register_user(
     if let Err(error) = validation {
         let json_user = json!({
             "errors":error,
-            "statusCode": 400,
+            "statusCode": StatusCode::BAD_REQUEST.as_u16(),
         });
         return HttpResponse::BadRequest().json(json_user);
     }
@@ -26,7 +26,7 @@ pub async fn register_user(
     if hashed_password.is_err() {
         let json_user = json!({
             "message":"internal server error",
-            "statusCode": 500,
+            "statusCode": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
         });
         return HttpResponse::InternalServerError().json(json_user);
     }
@@ -50,7 +50,7 @@ pub async fn register_user(
             let json_user = json!({
                 "data":user,
                 "message":"user registered successfully",
-                "statusCode": 201,
+                "statusCode": StatusCode::CREATED.as_u16(),
             });
             return HttpResponse::Created().json(json_user);
         }
@@ -60,14 +60,14 @@ pub async fn register_user(
                 if database_error.is_unique_violation() {
                     let json_user = json!({
                         "message":"email already exist",
-                        "statusCode": 409,
+                        "statusCode": StatusCode::CONFLICT.as_u16(),
                     });
                     return HttpResponse::Conflict().json(json_user);
                 }
             }
             let json_user = json!({
                 "message":"internal server error",
-                "statusCode": 500,
+                "statusCode": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             });
             return HttpResponse::InternalServerError().json(json_user);
         }
@@ -82,7 +82,7 @@ pub async fn login_user(
     if let Err(error) = validation {
         let json_user = json!({
             "errors": error,
-            "statusCode": 400,
+            "statusCode": StatusCode::BAD_REQUEST.as_u16(),
         });
         return HttpResponse::BadRequest().json(json_user);
     }
@@ -107,20 +107,20 @@ pub async fn login_user(
                 let json_user = json!({
                     "data":user,
                     "message":"user logged in successfully",
-                    "statusCode": 200,
+                    "statusCode": StatusCode::OK.as_u16(),
                 });
                 return HttpResponse::Ok().json(json_user);
             }
             let json_user = json!({
                 "message":"invalid credentials",
-                "statusCode": 401,
+                "statusCode": StatusCode::UNAUTHORIZED.as_u16(),
             });
             return HttpResponse::Unauthorized().json(json_user);
         }
         Err(_) => {
             let json_user = json!({
                 "message":"invalid credentials",
-                "statusCode": 401,
+                "statusCode": StatusCode::UNAUTHORIZED.as_u16(),
             });
             return HttpResponse::Unauthorized().json(json_user);
         }

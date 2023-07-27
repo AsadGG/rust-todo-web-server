@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{http::StatusCode, web, HttpResponse, Responder};
 use chrono::Utc;
 use serde_json::json;
 use sqlx::{Pool, Postgres};
@@ -29,14 +29,14 @@ pub async fn get_todo(
             let json_todo = json!({
                 "data":todo,
                 "message":"todo fetched successfully",
-                "statusCode": 200,
+                "statusCode": StatusCode::OK.as_u16(),
             });
             return HttpResponse::Ok().json(json_todo);
         }
         Err(_) => {
             let json_todo = json!({
                 "message":format!("todo with ID: {} not found", todo_id),
-                "statusCode": 404,
+                "statusCode": StatusCode::NOT_FOUND.as_u16(),
             });
             return HttpResponse::NotFound().json(json_todo);
         }
@@ -55,20 +55,20 @@ pub async fn get_todos(pool: web::Data<Pool<Postgres>>) -> impl Responder {
                 let json_todo = json!({
                     "data":todos,
                     "message":"todos fetched successfully",
-                    "statusCode": 200,
+                    "statusCode": StatusCode::OK.as_u16(),
                 });
                 return HttpResponse::Ok().json(json_todo);
             }
             let json_todo = json!({
                 "message":"todos does not exist",
-                "statusCode": 404,
+                "statusCode": StatusCode::NOT_FOUND.as_u16(),
             });
             return HttpResponse::NotFound().json(json_todo);
         }
         Err(_) => {
             let json_todo = json!({
                 "message":"internal server error",
-                "statusCode": 500,
+                "statusCode": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             });
             return HttpResponse::InternalServerError().json(json_todo);
         }
@@ -99,14 +99,14 @@ pub async fn create_todo(
             let json_todo = json!({
                 "data":todo,
                 "message":"todo created successfully",
-                "statusCode": 201,
+                "statusCode": StatusCode::CREATED.as_u16(),
             });
             return HttpResponse::Created().json(json_todo);
         }
         Err(_) => {
             let json_todo = json!({
                 "message":"internal server error",
-                "statusCode": 500,
+                "statusCode": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             });
             return HttpResponse::InternalServerError().json(json_todo);
         }
@@ -134,7 +134,7 @@ pub async fn update_todo(
     if query_result.is_err() {
         let json_todo = json!({
             "message":format!("todo with ID: {} not found", todo_id),
-            "statusCode": 404,
+            "statusCode": StatusCode::NOT_FOUND.as_u16(),
         });
         return HttpResponse::NotFound().json(json_todo);
     }
@@ -169,7 +169,7 @@ pub async fn update_todo(
         Ok(todo) => {
             let json_todo = json!({
                 "message":"todo updated successfully",
-                "statusCode": 200,
+                "statusCode": StatusCode::OK.as_u16(),
                 "data": todo
             });
             return HttpResponse::Ok().json(json_todo);
@@ -177,7 +177,7 @@ pub async fn update_todo(
         Err(_) => {
             let json_todo = json!({
                 "message":"todo updating failed",
-                "statusCode": 500,
+                "statusCode": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             });
             return HttpResponse::InternalServerError().json(json_todo);
         }
@@ -205,13 +205,13 @@ pub async fn delete_todo(
     if rows_affected == 0 {
         let json_todo = json!({
             "message":format!("todo with ID: {} not found", todo_id),
-            "statusCode": 404,
+            "statusCode": StatusCode::NOT_FOUND.as_u16(),
         });
         return HttpResponse::NotFound().json(json_todo);
     }
     let json_todo = json!({
         "message":"todo deleted successfully",
-        "statusCode": 200,
+        "statusCode": StatusCode::OK.as_u16(),
     });
     return HttpResponse::Ok().json(json_todo);
 }
