@@ -3,7 +3,10 @@ use serde_json::json;
 use sqlx::{Pool, Postgres};
 use validator::Validate;
 
-use crate::{config::argon2::Argon2PasswordHash, users::dtos::User};
+use crate::{
+    config::{argon2::Argon2PasswordHash, jwt::JWT},
+    users::dtos::User,
+};
 
 use super::dtos::{LoginUser, RegisterUser};
 
@@ -35,10 +38,10 @@ pub async fn register_user(
     let user = sqlx::query_as!(
         User,
         r#"
-            INSERT INTO users (email, password)
-            VALUES ($1, $2)
-            RETURNING *;
-            "#,
+        INSERT INTO users (email, password)
+        VALUES ($1, $2)
+        RETURNING *;
+        "#,
         register_user_dto.email,
         hashed_password
     )
@@ -48,7 +51,7 @@ pub async fn register_user(
     match user {
         Ok(user) => {
             let json_user = json!({
-                "data":user,
+                "data":user.to_register_success(),
                 "message":"user registered successfully",
                 "statusCode": StatusCode::CREATED.as_u16(),
             });
@@ -90,9 +93,9 @@ pub async fn login_user(
     let user = sqlx::query_as!(
         User,
         r#"
-            SELECT * FROM users
-            WHERE email = $1
-            "#,
+        SELECT * FROM users
+        WHERE email = $1
+        "#,
         login_user_dto.email
     )
     .fetch_one(pool)
@@ -104,12 +107,25 @@ pub async fn login_user(
                 login_user_dto.password.clone(),
                 user.password.clone(),
             ) {
-                let json_user = json!({
-                    "data":user,
-                    "message":"user logged in successfully",
-                    "statusCode": StatusCode::OK.as_u16(),
-                });
-                return HttpResponse::Ok().json(json_user);
+                let token = JWT::jwt_encode(user.id.to_string());
+
+                match token {
+                    Ok(token) => {
+                        let json_user = json!({
+                            "data":user.to_login_success(token),
+                            "message":"user logged in successfully",
+                            "statusCode": StatusCode::OK.as_u16(),
+                        });
+                        return HttpResponse::Ok().json(json_user);
+                    }
+                    Err(_) => {
+                        let json_user = json!({
+                            "message":"internal server error",
+                            "statusCode": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+                        });
+                        return HttpResponse::InternalServerError().json(json_user);
+                    }
+                }
             }
             let json_user = json!({
                 "message":"invalid credentials",

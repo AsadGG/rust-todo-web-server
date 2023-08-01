@@ -5,6 +5,7 @@
     "dotenv",
     "dtos",
     "Hasher",
+    "jsonwebtoken",
     "openapi",
     "rustls",
     "serde",

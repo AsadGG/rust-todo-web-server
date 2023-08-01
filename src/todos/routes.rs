@@ -1,8 +1,11 @@
+use crate::config::jwt::JWTAuthentication;
+
 use super::controllers::{create_todo, delete_todo, get_todo, get_todos, update_todo};
 use actix_web::web;
 
 pub fn scoped_config(service_config: &mut web::ServiceConfig) {
     let todo_scope = web::scope("/todos")
+        .wrap(JWTAuthentication {})
         .service(get_todos)
         .service(get_todo)
         .service(create_todo)

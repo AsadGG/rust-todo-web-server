@@ -1,7 +1,12 @@
-use actix_web::{http::StatusCode, web, HttpResponse, Responder};
+use actix_web::{
+    http::StatusCode,
+    web::{self, ReqData},
+    HttpResponse, Responder,
+};
 use chrono::Utc;
 use serde_json::json;
 use sqlx::{Pool, Postgres};
+use uuid::Uuid;
 
 use crate::todos::dtos::Todo;
 
@@ -9,17 +14,20 @@ use super::dtos::{CreateTodo, PathUuid, UpdateTodo};
 
 pub async fn get_todo(
     pool: web::Data<Pool<Postgres>>,
+    req_data: Option<ReqData<String>>,
     path: web::Path<PathUuid>,
 ) -> impl Responder {
+    let user_id = Uuid::parse_str(req_data.unwrap().into_inner().as_str()).unwrap();
     let pool = pool.as_ref();
     let todo_id = path.into_inner().id;
     let todo = sqlx::query_as!(
         Todo,
         r#"
         SELECT * FROM todos
-        WHERE id = $1
+        WHERE id = $1 AND user_id = $2
         "#,
-        todo_id
+        todo_id,
+        user_id
     )
     .fetch_one(pool)
     .await;
@@ -43,11 +51,22 @@ pub async fn get_todo(
     }
 }
 
-pub async fn get_todos(pool: web::Data<Pool<Postgres>>) -> impl Responder {
+pub async fn get_todos(
+    pool: web::Data<Pool<Postgres>>,
+    req_data: Option<ReqData<String>>,
+) -> impl Responder {
+    let user_id = Uuid::parse_str(req_data.unwrap().into_inner().as_str()).unwrap();
     let pool = pool.as_ref();
-    let todos = sqlx::query_as!(Todo, "SELECT * FROM todos")
-        .fetch_all(pool)
-        .await;
+    let todos = sqlx::query_as!(
+        Todo,
+        r#"
+        SELECT * FROM todos
+        WHERE user_id = $1
+        "#,
+        user_id
+    )
+    .fetch_all(pool)
+    .await;
 
     match todos {
         Ok(todos) => {
@@ -77,19 +96,22 @@ pub async fn get_todos(pool: web::Data<Pool<Postgres>>) -> impl Responder {
 
 pub async fn create_todo(
     pool: web::Data<Pool<Postgres>>,
+    req_data: Option<ReqData<String>>,
     create_todo_dto: web::Json<CreateTodo>,
 ) -> impl Responder {
+    let user_id = Uuid::parse_str(req_data.unwrap().into_inner().as_str()).unwrap();
     let pool = pool.as_ref();
 
     let todo = sqlx::query_as!(
         Todo,
         r#"
-        INSERT INTO todos (title, description)
-        VALUES ($1, $2)
+        INSERT INTO todos (title, description, user_id)
+        VALUES ($1, $2, $3)
         RETURNING *;
         "#,
         create_todo_dto.title,
-        create_todo_dto.description
+        create_todo_dto.description,
+        user_id
     )
     .fetch_one(pool)
     .await;
@@ -115,18 +137,21 @@ pub async fn create_todo(
 
 pub async fn update_todo(
     pool: web::Data<Pool<Postgres>>,
+    req_data: Option<ReqData<String>>,
     path: web::Path<PathUuid>,
     update_todo_dto: web::Json<UpdateTodo>,
 ) -> impl Responder {
+    let user_id = Uuid::parse_str(req_data.unwrap().into_inner().as_str()).unwrap();
     let pool = pool.as_ref();
     let todo_id = path.into_inner().id;
     let query_result = sqlx::query_as!(
         Todo,
         r#"
         SELECT * FROM todos
-        WHERE id = $1
+        WHERE id = $1 AND user_id = $2
         "#,
-        todo_id
+        todo_id,
+        user_id
     )
     .fetch_one(pool)
     .await;
@@ -186,16 +211,19 @@ pub async fn update_todo(
 
 pub async fn delete_todo(
     pool: web::Data<Pool<Postgres>>,
+    req_data: Option<ReqData<String>>,
     path: web::Path<PathUuid>,
 ) -> impl Responder {
+    let user_id = Uuid::parse_str(req_data.unwrap().into_inner().as_str()).unwrap();
     let pool = pool.as_ref();
     let todo_id = path.into_inner().id;
     let rows_affected = sqlx::query!(
         r#"
         DELETE FROM todos
-        WHERE id = $1
+        WHERE id = $1 AND user_id = $2
         "#,
-        todo_id
+        todo_id,
+        user_id
     )
     .execute(pool)
     .await
