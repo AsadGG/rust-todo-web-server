@@ -58,7 +58,6 @@ pub struct JWTAuthenticationMiddleware<S> {
     pub service: S,
 }
 
-// Implement the Transform trait for the JWT middleware.
 impl<S, B> Transform<S, ServiceRequest> for JWTAuthentication
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
@@ -76,7 +75,6 @@ where
     }
 }
 
-// Implement the Service trait for the JWT middleware.
 impl<S, B> Service<ServiceRequest> for JWTAuthenticationMiddleware<S>
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error>,
@@ -90,13 +88,10 @@ where
     forward_ready!(service);
 
     fn call(&self, request: ServiceRequest) -> Self::Future {
-        // Get the JWT token from the Authorization header.
         let token = request
             .headers()
             .get("Authorization")
             .and_then(|header| header.to_str().ok()?.strip_prefix("Bearer "));
-
-        // If the token is not present, return a 401 Unauthorized error.
         if token.is_none() {
             let json_error = json!({
                 "message":"missing or invalid authorization header",
@@ -104,8 +99,6 @@ where
             });
             return Box::pin(ready(Err(ErrorUnauthorized(json_error))));
         }
-
-        // Decode the JWT token and verify its signature.
         let decode: Result<TokenData<Claims>, jsonwebtoken::errors::Error> =
             JWT::jwt_decode(token.unwrap().to_string());
 
@@ -122,10 +115,6 @@ where
                 return Box::pin(ready(Err(ErrorUnauthorized(json_error))));
             }
         }
-
-        // Inject the claims into the request context.
-
-        // Continue with the next middleware handler.
         return Box::pin(self.service.call(request));
     }
 }
