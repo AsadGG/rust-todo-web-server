@@ -89,7 +89,7 @@ pub async fn get_todos(
         return HttpResponse::NotFound().json(json_todo);
     }
 
-    if (offset / limit) + 1 > (todos_count / limit) + 1 {
+    if offset >= todos_count {
         let json_todo = json!({
             "message":"exceeds the total page",
             "statusCode": StatusCode::BAD_REQUEST.as_u16(),

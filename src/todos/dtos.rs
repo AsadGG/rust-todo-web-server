@@ -26,6 +26,7 @@ pub struct Todo {
     pub completed: bool,
     pub description: String,
     pub id: Uuid,
+    #[serde(rename = "userId")]
     pub user_id: Uuid,
     pub title: String,
     #[serde(rename = "createdAt")]
