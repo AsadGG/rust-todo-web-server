@@ -7,10 +7,11 @@ use chrono::Utc;
 use serde_json::json;
 use sqlx::{Pool, Postgres};
 use uuid::Uuid;
+use validator::Validate;
 
-use crate::todos::dtos::Todo;
+use crate::todos::dtos::{Count, Todo};
 
-use super::dtos::{CreateTodo, PathUuid, UpdateTodo};
+use super::dtos::{CreateTodo, GetTodosQueryParam, GetTodosSuccess, PathUuid, UpdateTodo};
 
 pub async fn get_todo(
     pool: web::Data<Pool<Postgres>>,
@@ -54,35 +55,78 @@ pub async fn get_todo(
 pub async fn get_todos(
     pool: web::Data<Pool<Postgres>>,
     req_data: Option<ReqData<String>>,
+    query: web::Query<GetTodosQueryParam>,
 ) -> impl Responder {
+    let mut limit: i64 = 10;
+    let mut offset: i64 = 10;
+    let query_is_ok = query.validate().is_ok();
+    if query_is_ok {
+        limit = query.limit;
+        offset = query.offset;
+    }
     let user_id = Uuid::parse_str(req_data.unwrap().into_inner().as_str()).unwrap();
     let pool = pool.as_ref();
+
+    let count = sqlx::query_as!(
+        Count,
+        r#"
+        SELECT COUNT(*) AS count
+        FROM todos
+        WHERE user_id = $1
+        "#,
+        user_id,
+    )
+    .fetch_one(pool)
+    .await;
+
+    let todos_count: i64 = count.unwrap_or(Count { count: None }).count.unwrap_or(0);
+
+    if todos_count <= 0 {
+        let json_todo = json!({
+            "message":"todos does not exist",
+            "statusCode": StatusCode::NOT_FOUND.as_u16(),
+        });
+        return HttpResponse::NotFound().json(json_todo);
+    }
+
+    if (offset / limit) + 1 > (todos_count / limit) + 1 {
+        let json_todo = json!({
+            "message":"exceeds the total page",
+            "statusCode": StatusCode::BAD_REQUEST.as_u16(),
+        });
+        return HttpResponse::BadRequest().json(json_todo);
+    }
+
     let todos = sqlx::query_as!(
         Todo,
         r#"
         SELECT * FROM todos
         WHERE user_id = $1
+        LIMIT $2
+        OFFSET $3
         "#,
-        user_id
+        user_id,
+        limit,
+        offset
     )
     .fetch_all(pool)
     .await;
 
     match todos {
         Ok(todos) => {
-            if !todos.is_empty() {
-                let json_todo = json!({
-                    "data":todos,
-                    "message":"todos fetched successfully",
-                    "statusCode": StatusCode::OK.as_u16(),
-                });
-                return HttpResponse::Ok().json(json_todo);
-            }
+            let data = GetTodosSuccess {
+                page: (offset / limit) + 1,
+                per_page: limit,
+                todos,
+                total_pages: (todos_count / limit) + 1,
+                total: todos_count,
+            };
             let json_todo = json!({
-                "message":"todos does not exist",
-                "statusCode": StatusCode::NOT_FOUND.as_u16(),
+                "data":data,
+                "message":"todos fetched successfully",
+                "statusCode": StatusCode::OK.as_u16(),
             });
-            return HttpResponse::NotFound().json(json_todo);
+            return HttpResponse::Ok().json(json_todo);
         }
         Err(_) => {
             let json_todo = json!({

@@ -1,25 +1,27 @@
 #![allow(clippy::needless_return)]
-use super::dtos::{CreateTodo, PathUuid, UpdateTodo};
+use super::dtos::{CreateTodo, GetTodosQueryParam, PathUuid, UpdateTodo};
 use super::service;
 use actix_web::web::ReqData;
 use actix_web::{delete, get, patch, post, web, Responder};
 use sqlx::{Pool, Postgres};
 
-#[utoipa::path(tag = "Todos", path = "/api/todos")]
+#[utoipa::path(tag = "Todos", path = "/api/todos", params(GetTodosQueryParam))]
 #[get("")]
-
 pub async fn get_todos(
     pool: web::Data<Pool<Postgres>>,
     req_data: Option<ReqData<String>>,
+    query: web::Query<GetTodosQueryParam>,
 ) -> impl Responder {
-    return service::get_todos(pool, req_data).await;
+    return service::get_todos(pool, req_data, query).await;
 }
 
 #[utoipa::path(
-    tag = "Todos", path = "/api/todos/{id}",
-params(
-    ("id", description = "Unique storage id of Todo")
-),)]
+    tag = "Todos",
+    path = "/api/todos/{id}",
+    params(
+        ("id", description = "Unique storage id of Todo")
+    ),
+)]
 #[get("/{id}")]
 pub async fn get_todo(
     pool: web::Data<Pool<Postgres>>,
