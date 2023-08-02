@@ -58,12 +58,13 @@ pub async fn get_todos(
     query: web::Query<GetTodosQueryParam>,
 ) -> impl Responder {
     let mut limit: i64 = 10;
-    let mut offset: i64 = 10;
+    let mut offset: i64 = 0;
     let query_is_ok = query.validate().is_ok();
     if query_is_ok {
         limit = query.limit;
         offset = query.offset;
     }
+
     let user_id = Uuid::parse_str(req_data.unwrap().into_inner().as_str()).unwrap();
     let pool = pool.as_ref();
 

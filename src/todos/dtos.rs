@@ -8,11 +8,21 @@ pub struct PathUuid {
     pub id: Uuid,
 }
 
+const fn limit_default() -> i64 {
+    const LIMIT_DEFAULT: i64 = 10;
+    return LIMIT_DEFAULT;
+}
+const fn offset_default() -> i64 {
+    const OFFSET_DEFAULT: i64 = 0;
+    return OFFSET_DEFAULT;
+}
 #[derive(Clone, Debug, Deserialize, IntoParams, Validate)]
 pub struct GetTodosQueryParam {
     #[validate(range(min = 10))]
+    #[serde(default = "limit_default")]
     pub limit: i64,
     #[validate(range(min = 0))]
+    #[serde(default = "offset_default")]
     pub offset: i64,
 }
 
