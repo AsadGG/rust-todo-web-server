@@ -33,7 +33,7 @@ Welcome to the **Rust Todo Web Server** project! This project aims to create a s
 2. **Clone the Repository**: Use the following command to clone this repository to your local machine:
 
    ```bash
-   git clone [https://github.com/your-username/rust-todo-web-server.git](https://github.com/AsadGG/rust-todo-web-server.git)
+   git clone https://github.com/AsadGG/rust-todo-web-server.git
    ```
 
 3. **Install Dependencies**: Navigate to the project directory and install the required dependencies:
