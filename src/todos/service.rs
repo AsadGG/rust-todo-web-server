@@ -6,6 +6,7 @@ use actix_web::{
 use chrono::Utc;
 use serde_json::json;
 use sqlx::{Pool, Postgres};
+use tracing::{error, info};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -36,18 +37,21 @@ pub async fn get_todo(
     match todo {
         Ok(todo) => {
             let json_todo = json!({
-                "data":todo,
-                "message":"todo fetched successfully",
+                "data": todo,
+                "message": "todo fetched successfully",
                 "statusCode": StatusCode::OK.as_u16(),
             });
+            info!("{}", serde_json::to_string(&json_todo).unwrap());
             return HttpResponse::Ok().json(json_todo);
         }
-        Err(_) => {
-            let json_todo = json!({
-                "message":format!("todo with ID: {} not found", todo_id),
+        Err(error) => {
+            let json_error = json!({
+                "message": format!("todo with ID: {} not found", todo_id),
                 "statusCode": StatusCode::NOT_FOUND.as_u16(),
             });
-            return HttpResponse::NotFound().json(json_todo);
+            error!("{}", serde_json::to_string(&json_error).unwrap());
+            error!("{}", error);
+            return HttpResponse::NotFound().json(json_error);
         }
     }
 }
@@ -83,19 +87,21 @@ pub async fn get_todos(
     let todos_count: i64 = count.unwrap_or(Count { count: None }).count.unwrap_or(0);
 
     if todos_count <= 0 {
-        let json_todo = json!({
-            "message":"todos does not exist",
+        let json_error = json!({
+            "message": "todos does not exist",
             "statusCode": StatusCode::NOT_FOUND.as_u16(),
         });
-        return HttpResponse::NotFound().json(json_todo);
+        error!("{}", serde_json::to_string(&json_error).unwrap());
+        return HttpResponse::NotFound().json(json_error);
     }
 
     if offset >= todos_count {
-        let json_todo = json!({
-            "message":"exceeds the total page",
+        let json_error = json!({
+            "message": "exceeds the total page",
             "statusCode": StatusCode::BAD_REQUEST.as_u16(),
         });
-        return HttpResponse::BadRequest().json(json_todo);
+        error!("{}", serde_json::to_string(&json_error).unwrap());
+        return HttpResponse::BadRequest().json(json_error);
     }
 
     let todos = sqlx::query_as!(
@@ -103,6 +109,7 @@ pub async fn get_todos(
         r#"
         SELECT * FROM todos
         WHERE user_id = $1
+        ORDER BY created_at DESC
         LIMIT $2
         OFFSET $3
         "#,
@@ -122,19 +129,22 @@ pub async fn get_todos(
                 total_pages: (todos_count / limit) + 1,
                 total: todos_count,
             };
-            let json_todo = json!({
-                "data":data,
-                "message":"todos fetched successfully",
+            let json_todos = json!({
+                "data": data,
+                "message": "todos fetched successfully",
                 "statusCode": StatusCode::OK.as_u16(),
             });
-            return HttpResponse::Ok().json(json_todo);
+            info!("{}", serde_json::to_string(&json_todos).unwrap());
+            return HttpResponse::Ok().json(json_todos);
         }
-        Err(_) => {
-            let json_todo = json!({
-                "message":"internal server error",
+        Err(error) => {
+            let json_error = json!({
+                "message": "internal server error",
                 "statusCode": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             });
-            return HttpResponse::InternalServerError().json(json_todo);
+            error!("{}", serde_json::to_string(&json_error).unwrap());
+            error!("{}", error);
+            return HttpResponse::InternalServerError().json(json_error);
         }
     }
 }
@@ -164,18 +174,21 @@ pub async fn create_todo(
     match todo {
         Ok(todo) => {
             let json_todo = json!({
-                "data":todo,
-                "message":"todo created successfully",
+                "data": todo,
+                "message": "todo created successfully",
                 "statusCode": StatusCode::CREATED.as_u16(),
             });
+            info!("{}", serde_json::to_string(&json_todo).unwrap());
             return HttpResponse::Created().json(json_todo);
         }
-        Err(_) => {
-            let json_todo = json!({
-                "message":"internal server error",
+        Err(error) => {
+            let json_error = json!({
+                "message": "internal server error",
                 "statusCode": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             });
-            return HttpResponse::InternalServerError().json(json_todo);
+            error!("{}", serde_json::to_string(&json_error).unwrap());
+            error!("{}", error);
+            return HttpResponse::InternalServerError().json(json_error);
         }
     }
 }
@@ -201,12 +214,14 @@ pub async fn update_todo(
     .fetch_one(pool)
     .await;
 
-    if query_result.is_err() {
-        let json_todo = json!({
-            "message":format!("todo with ID: {} not found", todo_id),
+    if let Err(error) = query_result {
+        let json_error = json!({
+            "message": format!("todo with ID: {} not found", todo_id),
             "statusCode": StatusCode::NOT_FOUND.as_u16(),
         });
-        return HttpResponse::NotFound().json(json_todo);
+        error!("{}", serde_json::to_string(&json_error).unwrap());
+        error!("{}", error);
+        return HttpResponse::NotFound().json(json_error);
     }
 
     let now = Utc::now();
@@ -238,18 +253,21 @@ pub async fn update_todo(
     match query_result {
         Ok(todo) => {
             let json_todo = json!({
-                "message":"todo updated successfully",
+                "data": todo,
+                "message": "todo updated successfully",
                 "statusCode": StatusCode::OK.as_u16(),
-                "data": todo
             });
+            info!("{}", serde_json::to_string(&json_todo).unwrap());
             return HttpResponse::Ok().json(json_todo);
         }
-        Err(_) => {
-            let json_todo = json!({
-                "message":"todo updating failed",
+        Err(error) => {
+            let json_error = json!({
+                "message": "todo updating failed",
                 "statusCode": StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             });
-            return HttpResponse::InternalServerError().json(json_todo);
+            error!("{}", serde_json::to_string(&json_error).unwrap());
+            error!("{}", error);
+            return HttpResponse::InternalServerError().json(json_error);
         }
     }
 }
@@ -276,15 +294,17 @@ pub async fn delete_todo(
     .rows_affected();
 
     if rows_affected == 0 {
-        let json_todo = json!({
-            "message":format!("todo with ID: {} not found", todo_id),
+        let json_error = json!({
+            "message": format!("todo with ID: {} not found", todo_id),
             "statusCode": StatusCode::NOT_FOUND.as_u16(),
         });
-        return HttpResponse::NotFound().json(json_todo);
+        error!("{}", serde_json::to_string(&json_error).unwrap());
+        return HttpResponse::NotFound().json(json_error);
     }
     let json_todo = json!({
-        "message":"todo deleted successfully",
+        "message": "todo deleted successfully",
         "statusCode": StatusCode::OK.as_u16(),
     });
+    info!("{}", serde_json::to_string(&json_todo).unwrap());
     return HttpResponse::Ok().json(json_todo);
 }
